@@ -9,18 +9,21 @@
 #include <math.h>
 
 typedef struct instruction {
-    uint32_t operation;
+    uint32_t operationMSB;
     uint32_t s;
     uint32_t t;
+    uint32_t d;
     uint16_t I;
+    uint16_t operationLSB;
 } Instruction;
 
 /* Function Prototypes */ 
 void resetBuffer(int buffer[4])
 void resetBinaryInstruction(int binaryInstruction[32])
-void createBinaryInstruction(int buffer[4], int binaryInstructions[32])
+void createBinaryInstruction(int buffer[4], int binaryInstruction[32])
 int get_nth_bit(int num, int n);
-Instruction getInstructionComponents(int c);
+int instructionCode(int binaryInstruction[32])
+Instruction getInstructionComponents(int binaryInstruction[32]);
 void mips_add(Instruction instruction);
 void mips_sub(Instruction instruction);
 void mips_and(Instruction instruction);
@@ -46,8 +49,10 @@ int main(int argc, char *argv[]) {
 
     // to count bytes
     int bytes = 0;
+    // to count lines of instruction
+    int line = 0;
 
-    // read file from command line arguments
+    // open and read file from command line arguments
     FILE *file = fopen(argv[1], "r");
 
     // read bytes from file presenting instructions
@@ -60,32 +65,52 @@ int main(int argc, char *argv[]) {
         bytes++;
 
         if (bytes == 4) {
+            
             createBinaryInstruction(buffer, binaryInstruction);
             // split instruction into components using struct for identification
             Instruction instruction = getInstructionComponents(binaryInstruction);
-            if (instruction.operation == 28) {
+            if (instruction.operationMSB == 28) {
                 mips_mul(instruction);
-            } else if (instruction.operation == 4) {
+            } else if (instruction.operationMSB == 4) {
                 mips_beq(instruction);
-            } else if (instruction.operation == 5) {
+            } else if (instruction.operationMSB == 5) {
                 mips_bne(instruction);
-            } else if (instruction.operation == 8) {
+            } else if (instruction.operationMSB == 8) {
                 mips_add(instruction);
-            } else if (instruction.operation == 10) {
+            } else if (instruction.operationMSB == 10) {
                 mips_slti(instruction);
-            } else if (instrution.operation == 12) {
+            } else if (instrution.operationMSB == 12) {
                 mips_andi(instruction);
-            } else if (instruction.operation == 13) {
+            } else if (instruction.operationMSB == 13) {
                 mips_ori(instruction);
-            } else if (instruction.operation == 15) {
+            } else if (instruction.operationMSB == 15) {
                 mips_lui(instruction);
-            } else if (instruction.operation == 0 && instruction.I == 12) {
+            } else if (instruction.operationMSB == 0 && instruction.I == 12) {
                 mips_syscall();
+            } else if (instruction.operationLSB == 2 && instruction.operationMSB == 28) {
+                mips_mul(instruction);
+            } else if (instruction.operationMSB == 0 && instruction.operationLSB == 42) {
+                mips_slt(instruction);
+            } else if (instruction.operationMSB == 0 && instruction.operationLSB == 37) {
+                mips_or(instruction);
+            } else if (instruction.operationMSB == 0 && instruction.operationLSB == 40) {
+                mips_and(instruction);
+            } else if (instruction.operationMSB == 0 && instruction.operaationLSB == 34) {
+                mips_sub(instruction);
+            } else if (instruction.operationMSB == 0 && instruction.operationLSB == 32) {
+                mips_add(instruction);
+            } else {
+                // invalid instruction code
+                int instructionCode = instructionCode(binaryInstruction);
+                printf("%s:1: invalid instruction code: %d\n",argv[1], instructionCode);
+
             }
 
             bytes = 0;
+            line++;
             resetBuffer(buffer);
             resetBinaryInstruction(binaryInstruction);
+            
         }
     
         c = fgetc(file);
@@ -114,9 +139,9 @@ void createBinaryInstruction(int buffer[4], int binaryInstructions[32]) {
 
     int k = 31;
     for (int i = 3; i >= 0; i--) {
-        for (int n = 8; n >= 0; n--) {
+        for (int n = 0; n < 8; n++) {
             int bit = get_nth_bit(buffer[i], n);
-            (bit == 1) ? binaryInstructions[k--] = 1 : binaryInstructions[k--] = 0;
+            binaryInstruction[k--] = (bit == 1) 1 ? 0;
         }
     }
 
@@ -127,6 +152,20 @@ int get_nth_bit(int num, int n) {
     return (num >> n) & 1;
 }
 
+// gets 4 bytes of file input
+int instructionCode(int binaryInstructions[32]) {
+
+    int number = 0;
+    int multiplier = 1;
+    for (int i = 31; i >= 0; i--) {
+        number += binaryInstructions[i] * multiplier;
+        multiplier *= 2;
+    }
+
+
+    return number;
+}
+
 // create a struct to store all the components of an instruction
 Instruction getInstructionComponents(int binaryInstructions[32]) {
     Instruction instruction;
@@ -135,6 +174,20 @@ Instruction getInstructionComponents(int binaryInstructions[32]) {
     int multiplier = 1;
     for (int k = 31; k >= 16; k--) {
         instruction.I += binaryInstructions[k] * multiplier;
+        multiplier *= 2;
+    }
+
+    instruction.operationLSB = 0;
+    multiplier = 1;
+    for (int k = 31; k >= 21; k--) {
+        instruction.operationLSB += binaryInstructions[k] * multiplier;
+        multiplier *= 2;
+    }
+
+    instruction.d = 0;
+    multiplier = 1;
+    for (int k = 20; k >= 16; k--) {
+        instruction.d += binaryInstructions[k] * multiplier;
         multiplier *= 2;
     }
 
@@ -152,7 +205,7 @@ Instruction getInstructionComponents(int binaryInstructions[32]) {
         multiplier *= 2;
     }
 
-    instruction.operation = 0;
+    instruction.operationMSB = 0;
     multiplier = 1;
     for (int k = 5; k >= 0; k--) {
         instruction.operation += binaryInstructions[k] * multiplier;
