@@ -1,5 +1,4 @@
-
-/* Struct */
+/* Struct Definition */
 typedef struct instruction {
     uint32_t operationMSB;
     uint32_t s;
@@ -9,6 +8,8 @@ typedef struct instruction {
     uint32_t operationLSB;
 } Instruction;
 
+#define END_PROGRAM -1
+#define CONTINUE_PROGRAM -2
 
 /* Function Definitions */
 Instruction getInstructionComponents(int c);
@@ -30,4 +31,4 @@ void mips_slti(Instruction instruction, int *registers);
 void mips_andi(Instruction instruction, int *registers);
 void mips_ori(Instruction instruction, int *registers);
 void mips_lui(Instruction instruction, int *registers);
-int syscall();
+int mips_syscall(int *registers);
