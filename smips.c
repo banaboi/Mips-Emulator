@@ -10,6 +10,7 @@
 #include <math.h>
 
 
+
 #include "smips.h"
 
 int main(int argc, char *argv[]) {
@@ -18,7 +19,7 @@ int main(int argc, char *argv[]) {
     printInstructions(0, 0, argv[1]);
 
     // fill registers
-    //fillRegisters(0, argv[1]);
+    fillRegisters(0, argv[1]);
 
 
     // exit program
@@ -28,33 +29,59 @@ int main(int argc, char *argv[]) {
 
 // print non zero registers after execution
 void printRegisters(int *registers) {
+
     printf("Registers After Execution\n");
-    for (int i = 0; i < 32; i++) {
+    for (int i = 1; i < 33; i++) {
         if (registers[i] != 0) {
-            printf("$%d  = %d\n", i, registers[i]);
+            if (i < 10) {
+                printf("$%d  = %d\n", i, registers[i]);
+            } else {
+                printf("$%d = %d\n", i, registers[i]);
+            }
+            
         }
     }
 }
 
 
 void fillRegisters(int c, char *filename) {
+
+    // define state of program
+    int state = CONTINUE_PROGRAM;
     
     // open file for reading
     FILE *file = fopen(filename, "rb");
+
     // create register array
-    int registers[32] = {0};
+    int registers[33] = {0};
+
+    // to store instructions
+    int instructions[1000] = {0};
+
+    printf("Output\n");
     // read the file 32 bits at a time in hexadecimal format
+    // and store instructions into array
+    int k = 0;
+    int length = 0;
     while (fscanf(file, "%x", &c) == 1) {
+        instructions[k++] = c;
+        length++;
+    }
+
+    // loop through array of instructions to print output
+    int i = 0;
+    while (i < length && state == CONTINUE_PROGRAM){
+
         // split the instruction into components
-        Instruction instruction = getInstructionComponents(c);
+        Instruction instruction = getInstructionComponents(instructions[i]);
         
         // analyse each component to identify opcode
         if (instruction.operationMSB == 28) {
             mips_mul(instruction, registers);
         } else if (instruction.operationMSB == 4) {
-            mips_beq(instruction, registers);
+            if (registers[instruction.s] == registers[instruction.t]) i += instruction.I - 1;
         } else if (instruction.operationMSB == 5) {
-            mips_bne(instruction, registers);
+            if (registers[instruction.s] != registers[instruction.t]) i += instruction.I - 1;
         } else if (instruction.operationMSB == 8) {
             mips_addi(instruction, registers);
         } else if (instruction.operationMSB == 10) {
@@ -66,9 +93,7 @@ void fillRegisters(int c, char *filename) {
         } else if (instruction.operationMSB == 15) {
             mips_lui(instruction, registers);
         } else if (instruction.operationMSB == 0 && instruction.I == 12) {
-            //mips_syscall();
-        } else if (instruction.operationLSB == 2 && instruction.operationMSB == 28) {
-            mips_mul(instruction, registers);
+            state = mips_syscall(registers);
         } else if (instruction.operationMSB == 0 && instruction.operationLSB == 42) {
             mips_slt(instruction, registers);
         } else if (instruction.operationMSB == 0 && instruction.operationLSB == 37) {
@@ -79,14 +104,15 @@ void fillRegisters(int c, char *filename) {
             mips_sub(instruction, registers);
         } else if (instruction.operationMSB == 0 && instruction.operationLSB == 32) {
             mips_add(instruction, registers);
-        } else {
-
-            // invalid instruction code
         }
+        // changes to register $0 are ignored, remains equal to 0
+        if (registers[0] != 0) registers[0] = 0;
+        i++;
     }
 
     // file is read, close
     fclose(file);
+
     // print registers after execution
     printRegisters(registers);
 
@@ -101,6 +127,7 @@ void printInstructions(int c, int line, char *filename) {
     printf("Program\n");
     // read the file 32 bits at a time in hexadecimal format
     while (fscanf(file, "%x", &c) == 1) {
+
         // split the instruction into components
         Instruction instruction = getInstructionComponents(c);
         if (line < 10) {
@@ -139,6 +166,7 @@ void printInstructions(int c, int line, char *filename) {
         } else if (instruction.operationMSB == 0 && instruction.operationLSB == 32) {
             printMipsCode("add", instruction.d, instruction.s, instruction.t);
         } else {
+
             // invalid instruction code
             printf(" %s:%d: invalid instruction code: %d\n",filename,line, c);
 
@@ -202,30 +230,40 @@ void mips_slt(Instruction instruction, int *registers) {
     registers[instruction.d] = (registers[instruction.s] < registers[instruction.t]) ? 1 : 0;
 }
 void mips_mul(Instruction instruction, int *registers) {
-    registers[instruction.d] = registers[instruction.s] + registers[instruction.t];
-}
-void mips_beq(Instruction instruction, int *registers) {
     registers[instruction.d] = registers[instruction.s] * registers[instruction.t];
-}
-void mips_bne(Instruction instruction, int *registers) {
-    registers[instruction.d] = registers[instruction.s] + registers[instruction.t];
 }
 void mips_addi(Instruction instruction, int *registers) {
     registers[instruction.t] = registers[instruction.s] + instruction.I;
 }
 void mips_slti(Instruction instruction, int *registers) {
     registers[instruction.t] = (registers[instruction.s] < instruction.I) ? 1 : 0;
-    
 }
 void mips_andi(Instruction instruction, int *registers) {
     registers[instruction.t] = registers[instruction.s] & instruction.I;
 }
 
 void mips_lui(Instruction instruction, int *registers) {
-    registers[instruction.t] = instruction.I << registers[instruction.t];
+    registers[instruction.t] = instruction.I << 16;
 }
 
 void mips_ori(Instruction instruction, int *registers) {
     registers[instruction.t] = registers[instruction.s] | instruction.I;
+}
+
+int mips_syscall(int *registers) {
+
+    if (registers[2] == 11) {
+        printf("%c", (char)registers[4]);
+    } else if (registers[2] == 10) {
+        return END_PROGRAM;
+    } else if (registers[2] == 1) {
+        printf("%d", registers[4]);
+    } else {
+        printf("Unknown system call: %d\n", registers[2]);
+        return END_PROGRAM;
+    }
+
+    return CONTINUE_PROGRAM;
+
 }
 
