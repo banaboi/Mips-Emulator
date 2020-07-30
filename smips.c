@@ -4,68 +4,21 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
+#include <string.h>
 #include <stdint.h>
 #include <ctype.h>
 #include <math.h>
 
 
-/* Instruction Struct */
-typedef struct instruction {
-    uint32_t operationMSB;
-    uint32_t s;
-    uint32_t t;
-    uint32_t d;
-    int16_t I;
-    uint32_t operationLSB;
-} Instruction;
-
-
-/* Function Definitions */
-Instruction getInstructionComponents(int c);
-void printInstructions(int c, int line, char *filename);
-void fillRegisters(int c,char *filename);
-void printRegisters(int *registers);
-void print_mips_add(Instruction instruction);
-void print_mips_sub(Instruction instruction);
-void print_mips_and(Instruction instruction);
-void print_mips_or(Instruction instruction);
-void print_mips_slt(Instruction instruction);
-void print_mips_mul(Instruction instruction);
-void print_mips_beq(Instruction instruction);
-void print_mips_bne(Instruction instruction); 
-void print_mips_addi(Instruction instruction);
-void print_mips_slti(Instruction instruction);
-void print_mips_andi(Instruction instruction);
-void print_mips_ori(Instruction instruction);
-void print_mips_lui(Instruction instruction);
-void print_mips_syscall();
-
-void mips_add(Instruction instruction, int *registers);
-void mips_sub(Instruction instruction,int *registers);
-void mips_and(Instruction instruction, int *registers);
-void mips_or(Instruction instruction, int *registers);
-void mips_slt(Instruction instruction, int *registers);
-void mips_mul(Instruction instruction, int *registers);
-void mips_beq(Instruction instruction, int *registers);
-void mips_bne(Instruction instruction, int *registers); 
-void mips_addi(Instruction instruction, int *registers);
-void mips_slti(Instruction instruction, int *registers);
-void mips_andi(Instruction instruction, int *registers);
-void mips_ori(Instruction instruction, int *registers);
-void mips_lui(Instruction instruction, int *registers);
-//int syscall();
+#include "smips.h"
 
 int main(int argc, char *argv[]) {
 
     // print file instructions
     printInstructions(0, 0, argv[1]);
 
-
-
-
     // fill registers
-    fillRegisters(0, argv[1]);
+    //fillRegisters(0, argv[1]);
 
 
     // exit program
@@ -158,46 +111,33 @@ void printInstructions(int c, int line, char *filename) {
         
         // analyse each component to identify opcode
         if (instruction.operationMSB == 28) {
-            //mips_mul(instruction, registers);
-            print_mips_mul(instruction);
+            printMipsCode("mul", instruction.d, instruction.s, instruction.t);
         } else if (instruction.operationMSB == 4) {
-            //mips_beq(instruction, registers);
-            print_mips_beq(instruction);
+            printMipsCode("beq", instruction.s, instruction.t, instruction.I);
         } else if (instruction.operationMSB == 5) {
-            //mips_bne(instruction, registers);
-            print_mips_bne(instruction);
+            printMipsCode("bne", instruction.s, instruction.t, instruction.I);
         } else if (instruction.operationMSB == 8) {
-            //mips_addi(instruction, registers);
-            print_mips_addi(instruction);
+            printMipsCode("addi", instruction.t, instruction.s, instruction.I);
         } else if (instruction.operationMSB == 10) {
-            //mips_slti(instruction, registers);
-            print_mips_slti(instruction);
+            printMipsCode("slti", instruction.t, instruction.s, instruction.I);
         } else if (instruction.operationMSB == 12) {
-            //mips_andi(instruction, registers);
-            print_mips_andi(instruction);
+            printMipsCode("andi", instruction.t, instruction.s, instruction.I);
         } else if (instruction.operationMSB == 13) {
-            //mips_ori(instruction, registers);
-            print_mips_ori(instruction);
+            printMipsCode("ori", instruction.t, instruction.s, instruction.I);
         } else if (instruction.operationMSB == 15) {
-            //mips_lui(instruction, registers);
-            print_mips_lui(instruction);
+            printMipsCode("lui", instruction.t, instruction.I, 0);
         } else if (instruction.operationMSB == 0 && instruction.I == 12) {
-            print_mips_syscall();
+            printMipsCode("syscall",0,0,0);
         } else if (instruction.operationMSB == 0 && instruction.operationLSB == 42) {
-            //mips_slt(instruction, registers);
-            print_mips_slt(instruction);
+            printMipsCode("slt", instruction.d, instruction.s, instruction.t);
         } else if (instruction.operationMSB == 0 && instruction.operationLSB == 37) {
-            //mips_or(instruction, registers);
-            print_mips_or(instruction);
+            printMipsCode("or", instruction.d, instruction.s, instruction.t);
         } else if (instruction.operationMSB == 0 && instruction.operationLSB == 36) {
-            //mips_and(instruction, registers);
-            print_mips_and(instruction);
+            printMipsCode("and", instruction.d, instruction.s, instruction.t);
         } else if (instruction.operationMSB == 0 && instruction.operationLSB == 34) {
-            //mips_sub(instruction, registers);
-            print_mips_sub(instruction);
+            printMipsCode("sub", instruction.d, instruction.s, instruction.t);
         } else if (instruction.operationMSB == 0 && instruction.operationLSB == 32) {
-            //mips_add(instruction, registers);
-            print_mips_add(instruction);
+            printMipsCode("add", instruction.d, instruction.s, instruction.t);
         } else {
             // invalid instruction code
             printf(" %s:%d: invalid instruction code: %d\n",filename,line, c);
@@ -211,9 +151,6 @@ void printInstructions(int c, int line, char *filename) {
     fclose(file);
     
 }
-
-
-
 
 // create a struct to store all the components of an instruction
 Instruction getInstructionComponents(int c) {
@@ -230,66 +167,30 @@ Instruction getInstructionComponents(int c) {
 }
 
 
-///////////////////////////////////////////////////////////////////////////////
-
-void print_mips_add(Instruction instruction) {
-    printf(" add  $%d, $%d, $%d\n", instruction.d, instruction.s, instruction.t);
-}
-void print_mips_sub(Instruction instruction) {
-    printf(" sub  $%d, $%d, $%d\n", instruction.d, instruction.s, instruction.t);
-}
-void print_mips_and(Instruction instruction) {
-    printf(" and  $%d, $%d, $%d\n", instruction.d, instruction.s, instruction.t);
-}
-void print_mips_or(Instruction instruction) {
-    printf(" or  $%d, $%d, $%d\n", instruction.d, instruction.s, instruction.t);
-}
-void print_mips_slt(Instruction instruction) {
-    printf(" slt  $%d, $%d, $%d\n", instruction.d, instruction.s, instruction.t);
-}
-void print_mips_mul(Instruction instruction) {
-    printf(" mul  $%d, $%d, $%d\n", instruction.d, instruction.s, instruction.t);
-}
-void print_mips_beq(Instruction instruction) {
-    printf(" beq  $%d, $%d, %d\n", instruction.s, instruction.t, instruction.I);
+void printMipsCode(char *command, int num1, int num2, int num3) {
+    if (strcmp("syscall",command) == 0) {
+        printf(" syscall\n");
+    } else if (strcmp("lui",command) == 0) {
+        printf(" %s  $%d, %d\n", command, num1, num2);
+    } else if ( strcmp("add", command) == 0 || strcmp("sub", command) == 0 || 
+                strcmp("and", command) == 0 || strcmp("or", command) == 0 || 
+                strcmp("slt", command) == 0 || strcmp("mul", command) == 0) {
+        printf(" %s  $%d, $%d, $%d\n", command, num1, num2, num3);
+    } else if (strcmp("addi", command) == 0) {
+        printf(" %s $%d, $%d, %d\n", command, num1, num2, num3);
+    } else {
+        printf(" %s  $%d, $%d, %d\n", command, num1, num2, num3);
+    }
     
-}
-void print_mips_bne(Instruction instruction) {
-    printf(" bne  $%d, $%d, %d\n", instruction.s, instruction.t, instruction.I);
-    
-}
-void print_mips_addi(Instruction instruction) {
-    printf(" addi $%d, $%d, %d\n", instruction.t, instruction.s, instruction.I);
-
-}
-void print_mips_slti(Instruction instruction) {
-    printf(" slti  $%d, $%d, %d\n", instruction.t, instruction.s, instruction.I);
-    
-}
-void print_mips_andi(Instruction instruction) {
-    printf(" andi  $%d, $%d, %d\n", instruction.t, instruction.s, instruction.I);
-
-}
-void print_mips_ori(Instruction instruction) {
-    printf(" ori  $%d, $%d, %d\n", instruction.t, instruction.s, instruction.I);
-}
-void print_mips_lui(Instruction instruction) {
-    printf(" lui  $%d, %d\n", instruction.t, instruction.I);
-}
-void print_mips_syscall() {
-    printf(" syscall\n");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
 void mips_add(Instruction instruction, int *registers) {
-
     registers[instruction.d] = registers[instruction.s] + registers[instruction.t];
-
 }
 void mips_sub(Instruction instruction, int *registers) {
     registers[instruction.d] = registers[instruction.s] - registers[instruction.t];
-
 }
 void mips_and(Instruction instruction, int *registers) {
     registers[instruction.d] = registers[instruction.s] & registers[instruction.t];
@@ -305,15 +206,12 @@ void mips_mul(Instruction instruction, int *registers) {
 }
 void mips_beq(Instruction instruction, int *registers) {
     registers[instruction.d] = registers[instruction.s] * registers[instruction.t];
-    
 }
 void mips_bne(Instruction instruction, int *registers) {
     registers[instruction.d] = registers[instruction.s] + registers[instruction.t];
-    
 }
 void mips_addi(Instruction instruction, int *registers) {
     registers[instruction.t] = registers[instruction.s] + instruction.I;
-
 }
 void mips_slti(Instruction instruction, int *registers) {
     registers[instruction.t] = (registers[instruction.s] < instruction.I) ? 1 : 0;
@@ -321,7 +219,6 @@ void mips_slti(Instruction instruction, int *registers) {
 }
 void mips_andi(Instruction instruction, int *registers) {
     registers[instruction.t] = registers[instruction.s] & instruction.I;
-
 }
 
 void mips_lui(Instruction instruction, int *registers) {
@@ -331,3 +228,4 @@ void mips_lui(Instruction instruction, int *registers) {
 void mips_ori(Instruction instruction, int *registers) {
     registers[instruction.t] = registers[instruction.s] | instruction.I;
 }
+
