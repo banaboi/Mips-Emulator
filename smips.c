@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
     FILE *file = fopen(argv[1], "rb");
 
     if (file == NULL) {
+        fclose(file);
         printf("No such file or directory: '%s'\n", argv[1]);
         return 1;
     }
@@ -268,7 +269,7 @@ void mips_ori(Instruction instruction, int *registers) {
 int mips_syscall(int *registers) {
 
     if (registers[2] == 11) {
-        printf("%c", (char)registers[4]);
+        printf("%c", registers[4]);
     } else if (registers[2] == 10) {
         return END_PROGRAM;
     } else if (registers[2] == 1) {
