@@ -3,26 +3,21 @@
 // This program is a mips emulator.
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include <ctype.h>
-#include <math.h>
-
-
 
 #include "smips.h"
+
+
 
 int main(int argc, char *argv[]) {
 
     // print file instructions
     printInstructions(0, 0, argv[1]);
 
-    // fill registers
-    fillRegisters(0, argv[1]);
+    // execute program
+    executeProgram(0, argv[1]);
 
-
-    // exit program
     return 0;
 }
 
@@ -31,7 +26,7 @@ int main(int argc, char *argv[]) {
 void printRegisters(int *registers) {
 
     printf("Registers After Execution\n");
-    for (int i = 1; i < 33; i++) {
+    for (int i = 1; i < 32; i++) {
         if (registers[i] != 0) {
             if (i < 10) {
                 printf("$%d  = %d\n", i, registers[i]);
@@ -44,29 +39,22 @@ void printRegisters(int *registers) {
 }
 
 
-void fillRegisters(int c, char *filename) {
+void executeProgram(int c, char *filename) {
 
     // define state of program
     int state = CONTINUE_PROGRAM;
     
-    // open file for reading
-    FILE *file = fopen(filename, "rb");
-
-    // create register array
-    int registers[33] = {0};
+    // simulate 32 registers
+    int registers[32] = {0};
 
     // to store instructions
     int instructions[1000] = {0};
 
-    printf("Output\n");
-    // read the file 32 bits at a time in hexadecimal format
-    // and store instructions into array
-    int k = 0;
+    // store instructions into array
     int length = 0;
-    while (fscanf(file, "%x", &c) == 1) {
-        instructions[k++] = c;
-        length++;
-    }
+    fillInstructions(0,&length,instructions, filename);
+
+    printf("Output\n");
 
     // loop through array of instructions to print output
     int i = 0;
@@ -110,13 +98,29 @@ void fillRegisters(int c, char *filename) {
         i++;
     }
 
-    // file is read, close
-    fclose(file);
-
+    
     // print registers after execution
     printRegisters(registers);
 
 }
+
+// read the file 32 bits at a time in hexadecimal format
+// and store instructions into array
+void fillInstructions(int c, int *length, int *instructions, char *filename) {
+
+    // open file for reading
+    FILE *file = fopen(filename, "rb");
+
+    int k = 0;
+    while (fscanf(file, "%x", &c) == 1) {
+        instructions[k++] = c;
+        *length+= 1;
+    }
+
+    // file is read, close
+    fclose(file);
+}
+    
 
 // print the instructions from a given file
 void printInstructions(int c, int line, char *filename) {
