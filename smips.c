@@ -6,11 +6,22 @@
 #include <string.h>
 #include <stdint.h>
 
+
 #include "smips.h"
 
 
 
 int main(int argc, char *argv[]) {
+
+    // check for valid file
+    FILE *file = fopen(argv[1], "rb");
+
+    if (file == NULL) {
+        printf("No such file or directory: '%s'\n", argv[1]);
+        return 1;
+    }
+
+    fclose(file);
 
     // print file instructions
     printInstructions(0, 0, argv[1]);
@@ -127,7 +138,7 @@ void printInstructions(int c, int line, char *filename) {
     
     // open file for reading
     FILE *file = fopen(filename, "rb");
-
+    
     printf("Program\n");
     // read the file 32 bits at a time in hexadecimal format
     while (fscanf(file, "%x", &c) == 1) {
@@ -270,4 +281,5 @@ int mips_syscall(int *registers) {
     return CONTINUE_PROGRAM;
 
 }
+
 
